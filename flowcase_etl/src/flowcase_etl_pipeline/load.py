@@ -84,13 +84,18 @@ def _get_cv_id(conn, cv_partner_cv_id: str):
     ).scalar()
 
 
+ALLOWED_DIMENSION_TABLES = {"dim_technology", "dim_language", "dim_industry", "dim_project_type", "dim_clearance"}
+
+
 def _ensure_dimension_exists(conn, table: str, name: Optional[str], key: str = NAME_FIELD, id_col: str = None):
     if not name:
         return None
+    if table not in ALLOWED_DIMENSION_TABLES:
+        raise ValueError(f"Invalid dimension table: {table}")
     if id_col is None:
         id_col = (table[4:] + "_id") if table.startswith("dim_") else (table.rstrip("s") + "_id")
-    conn.execute(text(f"INSERT INTO {table} ({key}) VALUES (:n) ON CONFLICT ({key}) DO NOTHING"), {"n": name})
-    return conn.execute(text(f"SELECT {id_col} FROM {table} WHERE {key}=:n"), {"n": name}).scalar()
+    conn.execute(text(f"INSERT INTO {table} ({key}) VALUES (:n) ON CONFLICT ({key}) DO NOTHING"), {"n": name})  # nosec B608
+    return conn.execute(text(f"SELECT {id_col} FROM {table} WHERE {key}=:n"), {"n": name}).scalar()  # nosec B608
 
 def upsert_users(conn, df: pd.DataFrame):
     if df is None or df.empty:
