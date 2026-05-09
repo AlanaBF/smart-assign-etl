@@ -59,10 +59,10 @@ def test_lookup_user_id_prefers_email_then_upn_then_external():
     assert load_mod._lookup_user_id(conn, email=None, upn=None, external_id=None) is None
 
 
-def test_ensure_dimension_exists_returns_none_for_blank_and_inserts_when_present():
+def test_get_or_create_industry_returns_none_for_blank_and_inserts_when_present():
     conn = ConnWithMapping({"SELECT industry_id": 9})
-    assert load_mod._ensure_dimension_exists(conn, "dim_industry", None) is None  
-    value = load_mod._ensure_dimension_exists(conn, "dim_industry", "Energy")
+    assert load_mod._get_or_create_industry(conn, None) is None
+    value = load_mod._get_or_create_industry(conn, "Energy")
     assert value == 9
 
 
@@ -234,7 +234,7 @@ def test_upsert_languages_inserts(monkeypatch):
         return 7
 
     monkeypatch.setattr(load_mod, "_get_cv_id", fake_get_cv_id)
-    monkeypatch.setattr(load_mod, "_ensure_dimension_exists", lambda conn, table, name: 11)
+    monkeypatch.setattr(load_mod, "_get_or_create_language", lambda conn, name: 11)
 
     df = pd.DataFrame(
         {
@@ -249,14 +249,15 @@ def test_upsert_languages_inserts(monkeypatch):
     assert len(conn.calls) == 1
     batch = conn.calls[0]
     assert len(batch) == 1
-    payload = batch[0] 
+    payload = batch[0]
     assert payload["cv_id"] == 7
     assert payload["lang_id"] == 11
 
 
 def test_upsert_project_experiences(monkeypatch):
     monkeypatch.setattr(load_mod, "_get_cv_id", lambda conn, cid: 3)
-    monkeypatch.setattr(load_mod, "_ensure_dimension_exists", lambda conn, table, name: 5)
+    monkeypatch.setattr(load_mod, "_get_or_create_industry", lambda conn, name: 5)
+    monkeypatch.setattr(load_mod, "_get_or_create_project_type", lambda conn, name: 5)
 
     df = pd.DataFrame(
         {
@@ -426,9 +427,12 @@ def test_upsert_key_qualifications(monkeypatch):
 
 
 def test_load_orchestrator_runs_all(monkeypatch):
-    # Patch helper lookups to fixed IDs
     monkeypatch.setattr(load_mod, "_get_cv_id", lambda conn, cid: 1)
-    monkeypatch.setattr(load_mod, "_ensure_dimension_exists", lambda conn, table, name: 1)
+    monkeypatch.setattr(load_mod, "_get_or_create_technology", lambda conn, name: 1)
+    monkeypatch.setattr(load_mod, "_get_or_create_language", lambda conn, name: 1)
+    monkeypatch.setattr(load_mod, "_get_or_create_industry", lambda conn, name: 1)
+    monkeypatch.setattr(load_mod, "_get_or_create_project_type", lambda conn, name: 1)
+    monkeypatch.setattr(load_mod, "_get_or_create_clearance", lambda conn, name: 1)
     monkeypatch.setattr(load_mod, "_lookup_user_id", lambda conn, email, upn, external_id: 1)
 
     # Minimal data for each table

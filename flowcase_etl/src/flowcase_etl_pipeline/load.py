@@ -84,18 +84,39 @@ def _get_cv_id(conn, cv_partner_cv_id: str):
     ).scalar()
 
 
-ALLOWED_DIMENSION_TABLES = {"dim_technology", "dim_language", "dim_industry", "dim_project_type", "dim_clearance"}
-
-
-def _ensure_dimension_exists(conn, table: str, name: Optional[str], key: str = NAME_FIELD, id_col: str = None):
+def _get_or_create_technology(conn, name: Optional[str]):
     if not name:
         return None
-    if table not in ALLOWED_DIMENSION_TABLES:
-        raise ValueError(f"Invalid dimension table: {table}")
-    if id_col is None:
-        id_col = (table[4:] + "_id") if table.startswith("dim_") else (table.rstrip("s") + "_id")
-    conn.execute(text(f"INSERT INTO {table} ({key}) VALUES (:n) ON CONFLICT ({key}) DO NOTHING"), {"n": name})
-    return conn.execute(text(f"SELECT {id_col} FROM {table} WHERE {key}=:n"), {"n": name}).scalar()
+    conn.execute(text("INSERT INTO dim_technology (name) VALUES (:n) ON CONFLICT (name) DO NOTHING"), {"n": name})
+    return conn.execute(text("SELECT technology_id FROM dim_technology WHERE name=:n"), {"n": name}).scalar()
+
+
+def _get_or_create_language(conn, name: Optional[str]):
+    if not name:
+        return None
+    conn.execute(text("INSERT INTO dim_language (name) VALUES (:n) ON CONFLICT (name) DO NOTHING"), {"n": name})
+    return conn.execute(text("SELECT language_id FROM dim_language WHERE name=:n"), {"n": name}).scalar()
+
+
+def _get_or_create_industry(conn, name: Optional[str]):
+    if not name:
+        return None
+    conn.execute(text("INSERT INTO dim_industry (name) VALUES (:n) ON CONFLICT (name) DO NOTHING"), {"n": name})
+    return conn.execute(text("SELECT industry_id FROM dim_industry WHERE name=:n"), {"n": name}).scalar()
+
+
+def _get_or_create_project_type(conn, name: Optional[str]):
+    if not name:
+        return None
+    conn.execute(text("INSERT INTO dim_project_type (name) VALUES (:n) ON CONFLICT (name) DO NOTHING"), {"n": name})
+    return conn.execute(text("SELECT project_type_id FROM dim_project_type WHERE name=:n"), {"n": name}).scalar()
+
+
+def _get_or_create_clearance(conn, name: Optional[str]):
+    if not name:
+        return None
+    conn.execute(text("INSERT INTO dim_clearance (name) VALUES (:n) ON CONFLICT (name) DO NOTHING"), {"n": name})
+    return conn.execute(text("SELECT clearance_id FROM dim_clearance WHERE name=:n"), {"n": name}).scalar()
 
 def upsert_users(conn, df: pd.DataFrame):
     if df is None or df.empty:
@@ -308,7 +329,7 @@ def upsert_languages(conn, df: pd.DataFrame):
         cv_id = _get_cv_id(conn, row[CV_PARTNER_CV_ID])
         if not cv_id:
             continue
-        lang_id = _ensure_dimension_exists(conn, "dim_language", row.get(LANGUAGE))
+        lang_id = _get_or_create_language(conn, row.get(LANGUAGE))
         payload.append(
             {
                 "cv_id": cv_id,
@@ -394,8 +415,8 @@ def upsert_project_experiences(conn, df: pd.DataFrame):
                 "desc_ml": json.dumps(row.get(DESCRIPTION_MULTILANG, {})),
                 "ldesc_int": row.get(LONG_DESCRIPTION_INT),
                 "ldesc_ml": json.dumps(row.get(LONG_DESCRIPTION_MULTILANG, {})),
-                "industry_id": _ensure_dimension_exists(conn, "dim_industry", row.get(INDUSTRY)),
-                "project_type_id": _ensure_dimension_exists(conn, "dim_project_type", row.get(PROJECT_TYPE)),
+                "industry_id": _get_or_create_industry(conn, row.get(INDUSTRY)),
+                "project_type_id": _get_or_create_project_type(conn, row.get(PROJECT_TYPE)),
                 "pct_alloc": row.get(PERCENT_ALLOCATED),
                 "indiv_hours": row.get(EXTENT_INDIVIDUAL_HOURS),
                 "hours": row.get(EXTENT_HOURS),
