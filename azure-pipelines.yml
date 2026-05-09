@@ -1,0 +1,67 @@
+trigger:
+  - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+- stage: Test
+  displayName: Run Tests and Security Checks
+  jobs:
+  - job: TestAndScan
+    displayName: Test, Audit, and Analyse
+    steps:
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.11'
+    - script: |
+        pip install --upgrade pip
+        pip install -e .
+        pip install -r flowcase_etl/requirements.txt
+      displayName: Install dependencies
+    - script: |
+        pytest flowcase_etl/src/tests/ -v --cov=flowcase_etl/src/flowcase_etl_pipeline --cov-report=term-missing --cov-report=xml:coverage.xml
+      displayName: Run tests with coverage
+    - script: |
+        pip install pip-audit==2.10.0
+        pip-audit -r flowcase_etl/requirements.txt
+      displayName: Dependency audit (pip-audit)
+    - script: |
+        pip install bandit==1.9.4
+        bandit -r flowcase_etl/src/flowcase_etl_pipeline/ -ll
+      displayName: Code security scan (bandit)
+    - task: SonarCloudPrepare@3
+      inputs:
+        SonarCloud: 'Smart Assign'
+        organization: 'alanabf'
+        scannerMode: 'CLI'
+        configMode: 'manual'
+        cliProjectKey: 'AlanaBF_smart-assign-etl'
+        cliSources: 'flowcase_etl/src/flowcase_etl_pipeline'
+        extraProperties: |
+          sonar.python.coverage.reportPaths=coverage.xml
+          sonar.tests=flowcase_etl/src/tests
+          sonar.exclusions=flowcase_etl/src/tests/**,**/__pycache__/**
+    - task: SonarCloudAnalyze@3
+      displayName: Run SonarCloud analysis
+    - task: SonarCloudPublish@3
+      displayName: Publish SonarCloud results
+
+- stage: Build
+  displayName: Build and Push Image
+  dependsOn: Test
+  condition: succeeded()
+  jobs:
+  - job: BuildImage
+    displayName: Build ETL Docker Image
+    steps:
+    - task: Docker@2
+      displayName: Build and push to ACR
+      inputs:
+        command: buildAndPush
+        repository: 'smart-assign-etl'
+        dockerfile: '$(Build.SourcesDirectory)/Dockerfile'
+        containerRegistry: 'smartassignregistry'
+        tags: |
+          $(Build.BuildId)
+          latest

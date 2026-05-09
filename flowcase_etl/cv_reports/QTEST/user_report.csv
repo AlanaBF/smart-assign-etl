@@ -1,0 +1,2 @@
+Name (multilang),Title (#{lang}),Email,UPN,External User ID,CV Partner User ID,CV Partner CV ID,Phone Number,Landline,Birth Year,Department,Country,User created at,CV Last updated by owner,CV Last updated,Years of education,Years since first work experience,Access roles,Has profile image,Owns a reference project,Read and understood privacy notice,SFIA Level,CPD Level,CPD Band,CPD Label
+int:Jane Doe|no:Jane,int:Data Engineer,jane@example.com,,ext-1,1,cv-1,,,+1985,Data,UK,2024-01-01,2024-02-01,2024-02-02,16,10,,true,false,true,5,3,L,CPD3L

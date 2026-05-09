@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "flowcase_etl_pipeline"
+version = "0.1.0"
+description = "Flowcase ETL pipeline"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "Proprietary"}
+
+[project.scripts]
+flowcase-etl = "flowcase_etl_pipeline.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "flowcase_etl/src"}
+
+[tool.setuptools.packages.find]
+where = ["flowcase_etl/src"]
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: tests that require a running Postgres instance and seeded data",
+]

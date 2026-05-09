@@ -1,0 +1,2 @@
+CV Partner CV ID,CV Partner section ID,External unique ID,Month,Year,Name,Organiser,Long description,Highlighted,Is official masterdata (in #{lang}),Attachments,Updated,Updated by owner
+cv-1,course-1,ext-course-1,2,2023,SQL Basics,Internal,"Intro course",true,"{""int"":""Yes""}",file.pdf,2024-03-01,2024-03-02
