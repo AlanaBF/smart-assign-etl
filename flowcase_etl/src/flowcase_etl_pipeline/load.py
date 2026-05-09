@@ -94,8 +94,8 @@ def _ensure_dimension_exists(conn, table: str, name: Optional[str], key: str = N
         raise ValueError(f"Invalid dimension table: {table}")
     if id_col is None:
         id_col = (table[4:] + "_id") if table.startswith("dim_") else (table.rstrip("s") + "_id")
-    conn.execute(text(f"INSERT INTO {table} ({key}) VALUES (:n) ON CONFLICT ({key}) DO NOTHING"), {"n": name})  # nosec B608
-    return conn.execute(text(f"SELECT {id_col} FROM {table} WHERE {key}=:n"), {"n": name}).scalar()  # nosec B608
+    conn.execute(text(f"INSERT INTO {table} ({key}) VALUES (:n) ON CONFLICT ({key}) DO NOTHING"), {"n": name})
+    return conn.execute(text(f"SELECT {id_col} FROM {table} WHERE {key}=:n"), {"n": name}).scalar()
 
 def upsert_users(conn, df: pd.DataFrame):
     if df is None or df.empty:
