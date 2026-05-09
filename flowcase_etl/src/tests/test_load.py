@@ -146,7 +146,7 @@ def test_upsert_availability_handles_empty_and_missing_user(monkeypatch):
     assert conn.calls == []
 
 
-def test_upsert_section_table_inserts_when_get_cv_id_present(monkeypatch):
+def test_upsert_section_inserts_when_get_cv_id_present(monkeypatch):
     def fake_get_cv_id(conn, cv_partner_cv_id):
         return 123 if cv_partner_cv_id != "skip" else None
 
@@ -163,12 +163,13 @@ def test_upsert_section_table_inserts_when_get_cv_id_present(monkeypatch):
         "cv_partner_section_id": "CV Partner section ID",
         "external_unique_id": "External unique ID",
     }
+    sql = load_mod._build_section_sql("work_experience", fields)
 
     conn = FakeConn()
-    load_mod.upsert_section_table(conn, df, "work_experience", fields)
+    load_mod.upsert_section(conn, df, sql, fields)
 
     assert len(conn.calls) == 1
-    params = conn.calls[0][0]  
+    params = conn.calls[0][0]
     assert params["cv_id"] == 123
     assert params["cv_partner_section_id"] == "s1"
 

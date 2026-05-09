@@ -415,20 +415,23 @@ def upsert_project_experiences(conn, df: pd.DataFrame):
         conn.execute(sql, payload)
 
 
-def upsert_section_table(conn, df: pd.DataFrame, table: str, fields: dict):
-    if df is None or df.empty:
-        return
-    logger.info(f"Upserting {len(df)} rows into {table}...")
+def _build_section_sql(table: str, fields: dict) -> str:
     column_names = ["cv_id"] + list(fields.keys())
     cols = ", ".join(column_names)
     col_params = ", ".join(f":{column}" for column in column_names)
-    pk = "cv_partner_section_id" if "cv_partner_section_id" in fields.keys() else "name"
-    sql = f"""
+    pk = "cv_partner_section_id" if "cv_partner_section_id" in fields else "name"
+    update_cols = ", ".join(f"{col}=EXCLUDED.{col}" for col in fields if col != pk)
+    return f"""
       INSERT INTO {table} ({cols})
       VALUES ({col_params})
       ON CONFLICT (cv_id, {pk}) DO UPDATE
-      SET {", ".join(f"{col}=EXCLUDED.{col}" for col in fields.keys() if col != pk)}
+      SET {update_cols}
     """
+
+
+def upsert_section(conn, df: pd.DataFrame, sql: str, fields: dict):
+    if df is None or df.empty:
+        return
     payload = []
     for _, row in df.iterrows():
         cv_id = _get_cv_id(conn, row["CV Partner CV ID"])
@@ -438,39 +441,46 @@ def upsert_section_table(conn, df: pd.DataFrame, table: str, fields: dict):
         item["cv_id"] = cv_id
         payload.append(item)
     if payload:
+        logger.info(f"Upserting {len(payload)} rows.")
         conn.execute(text(sql), payload)
 
 
+WORK_EXPERIENCE_FIELDS = {
+    "cv_partner_section_id": CV_PARTNER_SECTION_ID,
+    "external_unique_id": EXTERNAL_UNIQUE_ID,
+    "month_from": MONTH_FROM,
+    "year_from": YEAR_FROM,
+    "month_to": MONTH_TO,
+    "year_to": YEAR_TO,
+    "highlighted": HIGHLIGHTED,
+    "employer": EMPLOYER,
+    "description": DESCRIPTION,
+    "long_description": LONG_DESCRIPTION,
+    "updated": UPDATED,
+    "updated_by_owner": UPDATED_BY_OWNER,
+}
+WORK_EXPERIENCE_SQL = _build_section_sql("work_experience", WORK_EXPERIENCE_FIELDS)
+
+
 def upsert_work_experiences(conn, df: pd.DataFrame):
-    fields = {
-        "cv_partner_section_id": CV_PARTNER_SECTION_ID,
-        "external_unique_id": EXTERNAL_UNIQUE_ID,
-        "month_from": MONTH_FROM,
-        "year_from": YEAR_FROM,
-        "month_to": MONTH_TO,
-        "year_to": YEAR_TO,
-        "highlighted": HIGHLIGHTED,
-        "employer": EMPLOYER,
-        "description": DESCRIPTION,
-        "long_description": LONG_DESCRIPTION,
-        "updated": UPDATED,
-        "updated_by_owner": UPDATED_BY_OWNER,
-    }
-    upsert_section_table(conn, df, "work_experience", fields)
+    upsert_section(conn, df, WORK_EXPERIENCE_SQL, WORK_EXPERIENCE_FIELDS)
+
+
+CERTIFICATION_FIELDS = {
+    "cv_partner_section_id": CV_PARTNER_SECTION_ID,
+    "external_unique_id": EXTERNAL_UNIQUE_ID,
+    "month": MONTH,
+    "year": YEAR,
+    "month_expire": MONTH_EXPIRE,
+    "year_expire": YEAR_EXPIRE,
+    "updated": UPDATED,
+    "updated_by_owner": UPDATED_BY_OWNER,
+}
+CERTIFICATION_SQL = _build_section_sql("certification", CERTIFICATION_FIELDS)
 
 
 def upsert_certifications(conn, df: pd.DataFrame):
-    fields = {
-        "cv_partner_section_id": CV_PARTNER_SECTION_ID,
-        "external_unique_id": EXTERNAL_UNIQUE_ID,
-        "month": MONTH,
-        "year": YEAR,
-        "month_expire": MONTH_EXPIRE,
-        "year_expire": YEAR_EXPIRE,
-        "updated": UPDATED,
-        "updated_by_owner": UPDATED_BY_OWNER,
-    }
-    upsert_section_table(conn, df, "certification", fields)
+    upsert_section(conn, df, CERTIFICATION_SQL, CERTIFICATION_FIELDS)
 
 
 def upsert_courses(conn, df: pd.DataFrame):
@@ -529,75 +539,90 @@ def upsert_courses(conn, df: pd.DataFrame):
         conn.execute(sql, payload)
 
 
+EDUCATION_FIELDS = {
+    "cv_partner_section_id": CV_PARTNER_SECTION_ID,
+    "external_unique_id": EXTERNAL_UNIQUE_ID,
+    "month_from": MONTH_FROM,
+    "year_from": YEAR_FROM,
+    "month_to": MONTH_TO,
+    "year_to": YEAR_TO,
+    "highlighted": HIGHLIGHTED,
+    "attachments": ATTACHMENTS,
+    "place_of_study": PLACE_OF_STUDY,
+    "degree": DEGREE,
+    "description": DESCRIPTION,
+    "updated": UPDATED,
+    "updated_by_owner": UPDATED_BY_OWNER,
+}
+EDUCATION_SQL = _build_section_sql("education", EDUCATION_FIELDS)
+
+
 def upsert_educations(conn, df: pd.DataFrame):
-    fields = {
-        "cv_partner_section_id": CV_PARTNER_SECTION_ID,
-        "external_unique_id": EXTERNAL_UNIQUE_ID,
-        "month_from": MONTH_FROM,
-        "year_from": YEAR_FROM,
-        "month_to": MONTH_TO,
-        "year_to": YEAR_TO,
-        "highlighted": HIGHLIGHTED,
-        "attachments": ATTACHMENTS,
-        "place_of_study": PLACE_OF_STUDY,
-        "degree": DEGREE,
-        "description": DESCRIPTION,
-        "updated": UPDATED,
-        "updated_by_owner": UPDATED_BY_OWNER,
-    }
-    upsert_section_table(conn, df, "education", fields)
+    upsert_section(conn, df, EDUCATION_SQL, EDUCATION_FIELDS)
+
+
+POSITION_FIELDS = {
+    "cv_partner_section_id": CV_PARTNER_SECTION_ID,
+    "external_unique_id": EXTERNAL_UNIQUE_ID,
+    "year_from": YEAR_FROM,
+    "year_to": YEAR_TO,
+    "highlighted": HIGHLIGHTED,
+    "name": NAME,
+    "description": DESCRIPTION,
+    "updated": UPDATED,
+    "updated_by_owner": UPDATED_BY_OWNER,
+}
+POSITION_SQL = _build_section_sql("position", POSITION_FIELDS)
 
 
 def upsert_positions(conn, df: pd.DataFrame):
-    fields = {
-        "cv_partner_section_id": CV_PARTNER_SECTION_ID,
-        "external_unique_id": EXTERNAL_UNIQUE_ID,
-        "year_from": YEAR_FROM,
-        "year_to": YEAR_TO,
-        "highlighted": HIGHLIGHTED,
-        "name": NAME,
-        "description": DESCRIPTION,
-        "updated": UPDATED,
-        "updated_by_owner": UPDATED_BY_OWNER,
-    }
-    upsert_section_table(conn, df, "position", fields)
+    upsert_section(conn, df, POSITION_SQL, POSITION_FIELDS)
+
+
+BLOG_FIELDS = {
+    "cv_partner_section_id": CV_PARTNER_SECTION_ID,
+    "external_unique_id": EXTERNAL_UNIQUE_ID,
+    "name": NAME,
+    "description": DESCRIPTION,
+    "highlighted": HIGHLIGHTED,
+    "updated": UPDATED,
+    "updated_by_owner": UPDATED_BY_OWNER,
+}
+BLOG_SQL = _build_section_sql("blog_publication", BLOG_FIELDS)
 
 
 def upsert_blogs(conn, df: pd.DataFrame):
-    fields = {
-        "cv_partner_section_id": CV_PARTNER_SECTION_ID,
-        "external_unique_id": EXTERNAL_UNIQUE_ID,
-        "name": NAME,
-        "description": DESCRIPTION,
-        "highlighted": HIGHLIGHTED,
-        "updated": UPDATED,
-        "updated_by_owner": UPDATED_BY_OWNER,
-    }
-    upsert_section_table(conn, df, "blog_publication", fields)
+    upsert_section(conn, df, BLOG_SQL, BLOG_FIELDS)
+
+
+CV_ROLE_FIELDS = {
+    "name": NAME,
+    "description": DESCRIPTION,
+    "highlighted": HIGHLIGHTED,
+    "updated": UPDATED,
+    "updated_by_owner": UPDATED_BY_OWNER,
+}
+CV_ROLE_SQL = _build_section_sql("cv_role", CV_ROLE_FIELDS)
 
 
 def upsert_cv_roles(conn, df: pd.DataFrame):
-    fields = {
-        "name": NAME,
-        "description": DESCRIPTION,
-        "highlighted": HIGHLIGHTED,
-        "updated": UPDATED,
-        "updated_by_owner": UPDATED_BY_OWNER,
-    }
-    upsert_section_table(conn, df, "cv_role", fields)
+    upsert_section(conn, df, CV_ROLE_SQL, CV_ROLE_FIELDS)
+
+
+KEY_QUALIFICATION_FIELDS = {
+    "cv_partner_section_id": CV_PARTNER_SECTION_ID,
+    "external_unique_id": EXTERNAL_UNIQUE_ID,
+    "label": LABEL,
+    "summary": SUMMARY_OF_QUALIFICATIONS,
+    "short_description": SHORT_DESCRIPTION,
+    "updated": UPDATED,
+    "updated_by_owner": UPDATED_BY_OWNER,
+}
+KEY_QUALIFICATION_SQL = _build_section_sql("key_qualification", KEY_QUALIFICATION_FIELDS)
 
 
 def upsert_key_qualifications(conn, df: pd.DataFrame):
-    fields = {
-        "cv_partner_section_id": CV_PARTNER_SECTION_ID,
-        "external_unique_id": EXTERNAL_UNIQUE_ID,
-        "label": LABEL,
-        "summary": SUMMARY_OF_QUALIFICATIONS,
-        "short_description": SHORT_DESCRIPTION,
-        "updated": UPDATED,
-        "updated_by_owner": UPDATED_BY_OWNER,
-    }
-    upsert_section_table(conn, df, "key_qualification", fields)
+    upsert_section(conn, df, KEY_QUALIFICATION_SQL, KEY_QUALIFICATION_FIELDS)
 
 
 def upsert_sc_clearance(conn, df: pd.DataFrame):
