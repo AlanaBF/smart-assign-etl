@@ -415,20 +415,6 @@ def upsert_project_experiences(conn, df: pd.DataFrame):
         conn.execute(sql, payload)
 
 
-def _build_section_sql(table: str, fields: dict) -> str:
-    column_names = ["cv_id"] + list(fields.keys())
-    cols = ", ".join(column_names)
-    col_params = ", ".join(f":{column}" for column in column_names)
-    pk = "cv_partner_section_id" if "cv_partner_section_id" in fields else "name"
-    update_cols = ", ".join(f"{col}=EXCLUDED.{col}" for col in fields if col != pk)
-    return f"""
-      INSERT INTO {table} ({cols})
-      VALUES ({col_params})
-      ON CONFLICT (cv_id, {pk}) DO UPDATE
-      SET {update_cols}
-    """
-
-
 def upsert_section(conn, df: pd.DataFrame, sql: str, fields: dict):
     if df is None or df.empty:
         return
@@ -459,7 +445,12 @@ WORK_EXPERIENCE_FIELDS = {
     "updated": UPDATED,
     "updated_by_owner": UPDATED_BY_OWNER,
 }
-WORK_EXPERIENCE_SQL = _build_section_sql("work_experience", WORK_EXPERIENCE_FIELDS)
+WORK_EXPERIENCE_SQL = """
+    INSERT INTO work_experience (cv_id, cv_partner_section_id, external_unique_id, month_from, year_from, month_to, year_to, highlighted, employer, description, long_description, updated, updated_by_owner)
+    VALUES (:cv_id, :cv_partner_section_id, :external_unique_id, :month_from, :year_from, :month_to, :year_to, :highlighted, :employer, :description, :long_description, :updated, :updated_by_owner)
+    ON CONFLICT (cv_id, cv_partner_section_id) DO UPDATE
+    SET external_unique_id=EXCLUDED.external_unique_id, month_from=EXCLUDED.month_from, year_from=EXCLUDED.year_from, month_to=EXCLUDED.month_to, year_to=EXCLUDED.year_to, highlighted=EXCLUDED.highlighted, employer=EXCLUDED.employer, description=EXCLUDED.description, long_description=EXCLUDED.long_description, updated=EXCLUDED.updated, updated_by_owner=EXCLUDED.updated_by_owner
+"""
 
 
 def upsert_work_experiences(conn, df: pd.DataFrame):
@@ -476,7 +467,12 @@ CERTIFICATION_FIELDS = {
     "updated": UPDATED,
     "updated_by_owner": UPDATED_BY_OWNER,
 }
-CERTIFICATION_SQL = _build_section_sql("certification", CERTIFICATION_FIELDS)
+CERTIFICATION_SQL = """
+    INSERT INTO certification (cv_id, cv_partner_section_id, external_unique_id, month, year, month_expire, year_expire, updated, updated_by_owner)
+    VALUES (:cv_id, :cv_partner_section_id, :external_unique_id, :month, :year, :month_expire, :year_expire, :updated, :updated_by_owner)
+    ON CONFLICT (cv_id, cv_partner_section_id) DO UPDATE
+    SET external_unique_id=EXCLUDED.external_unique_id, month=EXCLUDED.month, year=EXCLUDED.year, month_expire=EXCLUDED.month_expire, year_expire=EXCLUDED.year_expire, updated=EXCLUDED.updated, updated_by_owner=EXCLUDED.updated_by_owner
+"""
 
 
 def upsert_certifications(conn, df: pd.DataFrame):
@@ -554,7 +550,12 @@ EDUCATION_FIELDS = {
     "updated": UPDATED,
     "updated_by_owner": UPDATED_BY_OWNER,
 }
-EDUCATION_SQL = _build_section_sql("education", EDUCATION_FIELDS)
+EDUCATION_SQL = """
+    INSERT INTO education (cv_id, cv_partner_section_id, external_unique_id, month_from, year_from, month_to, year_to, highlighted, attachments, place_of_study, degree, description, updated, updated_by_owner)
+    VALUES (:cv_id, :cv_partner_section_id, :external_unique_id, :month_from, :year_from, :month_to, :year_to, :highlighted, :attachments, :place_of_study, :degree, :description, :updated, :updated_by_owner)
+    ON CONFLICT (cv_id, cv_partner_section_id) DO UPDATE
+    SET external_unique_id=EXCLUDED.external_unique_id, month_from=EXCLUDED.month_from, year_from=EXCLUDED.year_from, month_to=EXCLUDED.month_to, year_to=EXCLUDED.year_to, highlighted=EXCLUDED.highlighted, attachments=EXCLUDED.attachments, place_of_study=EXCLUDED.place_of_study, degree=EXCLUDED.degree, description=EXCLUDED.description, updated=EXCLUDED.updated, updated_by_owner=EXCLUDED.updated_by_owner
+"""
 
 
 def upsert_educations(conn, df: pd.DataFrame):
@@ -572,7 +573,12 @@ POSITION_FIELDS = {
     "updated": UPDATED,
     "updated_by_owner": UPDATED_BY_OWNER,
 }
-POSITION_SQL = _build_section_sql("position", POSITION_FIELDS)
+POSITION_SQL = """
+    INSERT INTO position (cv_id, cv_partner_section_id, external_unique_id, year_from, year_to, highlighted, name, description, updated, updated_by_owner)
+    VALUES (:cv_id, :cv_partner_section_id, :external_unique_id, :year_from, :year_to, :highlighted, :name, :description, :updated, :updated_by_owner)
+    ON CONFLICT (cv_id, cv_partner_section_id) DO UPDATE
+    SET external_unique_id=EXCLUDED.external_unique_id, year_from=EXCLUDED.year_from, year_to=EXCLUDED.year_to, highlighted=EXCLUDED.highlighted, name=EXCLUDED.name, description=EXCLUDED.description, updated=EXCLUDED.updated, updated_by_owner=EXCLUDED.updated_by_owner
+"""
 
 
 def upsert_positions(conn, df: pd.DataFrame):
@@ -588,7 +594,12 @@ BLOG_FIELDS = {
     "updated": UPDATED,
     "updated_by_owner": UPDATED_BY_OWNER,
 }
-BLOG_SQL = _build_section_sql("blog_publication", BLOG_FIELDS)
+BLOG_SQL = """
+    INSERT INTO blog_publication (cv_id, cv_partner_section_id, external_unique_id, name, description, highlighted, updated, updated_by_owner)
+    VALUES (:cv_id, :cv_partner_section_id, :external_unique_id, :name, :description, :highlighted, :updated, :updated_by_owner)
+    ON CONFLICT (cv_id, cv_partner_section_id) DO UPDATE
+    SET external_unique_id=EXCLUDED.external_unique_id, name=EXCLUDED.name, description=EXCLUDED.description, highlighted=EXCLUDED.highlighted, updated=EXCLUDED.updated, updated_by_owner=EXCLUDED.updated_by_owner
+"""
 
 
 def upsert_blogs(conn, df: pd.DataFrame):
@@ -602,7 +613,12 @@ CV_ROLE_FIELDS = {
     "updated": UPDATED,
     "updated_by_owner": UPDATED_BY_OWNER,
 }
-CV_ROLE_SQL = _build_section_sql("cv_role", CV_ROLE_FIELDS)
+CV_ROLE_SQL = """
+    INSERT INTO cv_role (cv_id, name, description, highlighted, updated, updated_by_owner)
+    VALUES (:cv_id, :name, :description, :highlighted, :updated, :updated_by_owner)
+    ON CONFLICT (cv_id, name) DO UPDATE
+    SET description=EXCLUDED.description, highlighted=EXCLUDED.highlighted, updated=EXCLUDED.updated, updated_by_owner=EXCLUDED.updated_by_owner
+"""
 
 
 def upsert_cv_roles(conn, df: pd.DataFrame):
@@ -618,7 +634,12 @@ KEY_QUALIFICATION_FIELDS = {
     "updated": UPDATED,
     "updated_by_owner": UPDATED_BY_OWNER,
 }
-KEY_QUALIFICATION_SQL = _build_section_sql("key_qualification", KEY_QUALIFICATION_FIELDS)
+KEY_QUALIFICATION_SQL = """
+    INSERT INTO key_qualification (cv_id, cv_partner_section_id, external_unique_id, label, summary, short_description, updated, updated_by_owner)
+    VALUES (:cv_id, :cv_partner_section_id, :external_unique_id, :label, :summary, :short_description, :updated, :updated_by_owner)
+    ON CONFLICT (cv_id, cv_partner_section_id) DO UPDATE
+    SET external_unique_id=EXCLUDED.external_unique_id, label=EXCLUDED.label, summary=EXCLUDED.summary, short_description=EXCLUDED.short_description, updated=EXCLUDED.updated, updated_by_owner=EXCLUDED.updated_by_owner
+"""
 
 
 def upsert_key_qualifications(conn, df: pd.DataFrame):

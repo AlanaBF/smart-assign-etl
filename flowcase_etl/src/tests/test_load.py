@@ -163,7 +163,12 @@ def test_upsert_section_inserts_when_get_cv_id_present(monkeypatch):
         "cv_partner_section_id": "CV Partner section ID",
         "external_unique_id": "External unique ID",
     }
-    sql = load_mod._build_section_sql("work_experience", fields)
+    sql = """
+        INSERT INTO work_experience (cv_id, cv_partner_section_id, external_unique_id)
+        VALUES (:cv_id, :cv_partner_section_id, :external_unique_id)
+        ON CONFLICT (cv_id, cv_partner_section_id) DO UPDATE
+        SET external_unique_id=EXCLUDED.external_unique_id
+    """
 
     conn = FakeConn()
     load_mod.upsert_section(conn, df, sql, fields)
