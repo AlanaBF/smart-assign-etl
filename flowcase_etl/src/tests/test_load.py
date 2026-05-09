@@ -59,11 +59,40 @@ def test_lookup_user_id_prefers_email_then_upn_then_external():
     assert load_mod._lookup_user_id(conn, email=None, upn=None, external_id=None) is None
 
 
+def test_get_cv_id_returns_scalar():
+    conn = ConnWithMapping({"SELECT cv_id": 42})
+    assert load_mod._get_cv_id(conn, "cv-123") == 42
+
+
+def test_get_or_create_technology_returns_none_for_blank():
+    conn = ConnWithMapping({"SELECT technology_id": 7})
+    assert load_mod._get_or_create_technology(conn, None) is None
+    assert load_mod._get_or_create_technology(conn, "") is None
+    assert load_mod._get_or_create_technology(conn, "Python") == 7
+
+
+def test_get_or_create_language_returns_none_for_blank():
+    conn = ConnWithMapping({"SELECT language_id": 3})
+    assert load_mod._get_or_create_language(conn, None) is None
+    assert load_mod._get_or_create_language(conn, "English") == 3
+
+
 def test_get_or_create_industry_returns_none_for_blank_and_inserts_when_present():
     conn = ConnWithMapping({"SELECT industry_id": 9})
     assert load_mod._get_or_create_industry(conn, None) is None
-    value = load_mod._get_or_create_industry(conn, "Energy")
-    assert value == 9
+    assert load_mod._get_or_create_industry(conn, "Energy") == 9
+
+
+def test_get_or_create_project_type_returns_none_for_blank():
+    conn = ConnWithMapping({"SELECT project_type_id": 5})
+    assert load_mod._get_or_create_project_type(conn, None) is None
+    assert load_mod._get_or_create_project_type(conn, "Agile") == 5
+
+
+def test_get_or_create_clearance_returns_none_for_blank():
+    conn = ConnWithMapping({"SELECT clearance_id": 2})
+    assert load_mod._get_or_create_clearance(conn, None) is None
+    assert load_mod._get_or_create_clearance(conn, "SC") == 2
 
 
 def test_upsert_users_handles_empty_df():
